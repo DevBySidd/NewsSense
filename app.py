@@ -1,7 +1,9 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import time
+import joblib
 
 from Sentiment import analyze_sentiment
 import database
@@ -19,6 +21,19 @@ st.set_page_config(
 )
 
 database.create_table()
+
+
+# ============================================================
+# MACHINE LEARNING MODEL
+# ============================================================
+
+ml_model = joblib.load(
+    "ml/sentiment_model.pkl"
+)
+
+tfidf_vectorizer = joblib.load(
+    "ml/tfidf_vectorizer.pkl"
+)
 
 
 # ============================================================
@@ -1578,7 +1593,7 @@ elif page == "🔎 Analyze News":
                 </div>
 
                 <div class="analyzer-sub">
-                    Powered by TextBlob Natural Language Processing
+                    Powered by TextBlob + Scikit-learn Machine Learning
                 </div>
 
             </div>
@@ -1662,7 +1677,22 @@ elif page == "🔎 Analyze News":
             time.sleep(.8)
 
 
+            # =================================================
+            # TEXTBLOB SENTIMENT
+            # =================================================
+
             result = analyze_sentiment(text)
+
+
+            # =================================================
+            # MACHINE LEARNING SENTIMENT
+            # =================================================
+
+            news_tfidf = tfidf_vectorizer.transform([text])
+
+            ml_prediction = ml_model.predict(
+                news_tfidf
+            )[0]
 
 
             loader.empty()
@@ -1677,6 +1707,11 @@ elif page == "🔎 Analyze News":
             subjectivity = float(
                 result["subjectivity"]
             )
+
+
+            # Convert ML prediction into display format
+
+            ml_sentiment = ml_prediction.capitalize()
 
 
             # Save database
@@ -1720,7 +1755,7 @@ elif page == "🔎 Analyze News":
                     </div>
 
                     <div class="result-label">
-                        DETECTED SENTIMENT
+                        TEXTBLOB DETECTED SENTIMENT
                     </div>
 
                     <div class="result-sentiment">
@@ -1738,6 +1773,72 @@ elif page == "🔎 Analyze News":
 
             st.write("")
 
+
+            # =================================================
+            # TEXTBLOB + ML COMPARISON
+            # =================================================
+
+            st.html(
+                f"""
+                <div class="section-title">
+                    Sentiment Comparison
+                </div>
+
+                <div class="section-sub">
+                    Compare the traditional NLP result with the
+                    Scikit-learn machine-learning prediction
+                </div>
+                """
+            )
+
+
+            comparison_col1, comparison_col2 = st.columns(2)
+
+
+            with comparison_col1:
+
+                st.html(
+                    f"""
+                    <div class="score">
+
+                        <div class="score-label">
+                            TEXTBLOB SENTIMENT
+                        </div>
+
+                        <div class="score-value">
+                            {sentiment}
+                        </div>
+
+                    </div>
+                    """
+                )
+
+
+            with comparison_col2:
+
+                st.html(
+                    f"""
+                    <div class="score">
+
+                        <div class="score-label">
+                            SCIKIT-LEARN ML SENTIMENT
+                        </div>
+
+                        <div class="score-value">
+                            {ml_sentiment}
+                        </div>
+
+                    </div>
+                    """
+                )
+
+
+            st.write("")
+
+
+            # ------------------------------------------------
+            # TEXTBLOB SCORES
+            # ------------------------------------------------
 
             c1, c2, c3 = st.columns(3)
 
@@ -2033,7 +2134,7 @@ st.html("""
 
     <br><br>
 
-    Built with Python · TextBlob · Pandas · SQLite · Plotly · Streamlit
+    Built with Python · TextBlob · Scikit-learn · Pandas · SQLite · Plotly · Streamlit
 
 </div>
 """)
